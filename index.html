@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Frosted Glass 3D Wheel</title>
+    <title>Simple 3D Wheel</title>
     <style>
         body {
             margin: 0;
@@ -14,30 +14,25 @@
         canvas {
             display: block;
         }
-        #loading {
+        #info {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(255, 255, 255, 0.8);
-            padding: 20px;
-            border-radius: 10px;
-            z-index: 100;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            color: #333;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
-    <div id="loading">Loading 3D Wheel...</div>
+    <div id="info">Frosted Glass 3D Wheel - Click and drag to rotate</div>
     
-    <!-- Using full URLs to CDN resources -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/examples/js/loaders/FontLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/examples/js/geometries/TextGeometry.js"></script>
+    <!-- Load Three.js from a reliable CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
     <script>
         // Global variables
-        let scene, camera, renderer, controls;
+        let scene, camera, renderer;
         let wheel;
         
         // Initialize the scene
@@ -55,15 +50,14 @@
             renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
             
-            // Basic orbit controls
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            
             // Create the wheel
             createWheel();
             
             // Set up lighting
             setupLights();
+            
+            // Simple camera controls without OrbitControls
+            setupCameraControls();
             
             // Handle window resize
             window.addEventListener('resize', onWindowResize, false);
@@ -78,224 +72,76 @@
             const outerRadius = 3;
             const innerRadius = 0.8;
             const thickness = 0.4;
-            const segments = 48;
             
-            // Create ring shape
-            const shape = new THREE.Shape();
-            shape.absarc(0, 0, outerRadius, 0, Math.PI * 2, false);
+            // Create a ring (torus) geometry
+            const wheelGeometry = new THREE.TorusGeometry(
+                (outerRadius + innerRadius) / 2,  // radius
+                (outerRadius - innerRadius) / 2,  // tube radius
+                16,  // radial segments
+                64   // tubular segments
+            );
             
-            const holePath = new THREE.Path();
-            holePath.absarc(0, 0, innerRadius, 0, Math.PI * 2, true);
-            shape.holes.push(holePath);
-            
-            // Extrude settings
-            const extrudeSettings = {
-                depth: thickness,
-                bevelEnabled: true,
-                bevelSegments: 3,
-                bevelSize: 0.1,
-                bevelThickness: 0.05,
-                curveSegments: segments
-            };
-            
-            // Create the extruded geometry
-            const wheelGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-            wheelGeometry.center();
-            
-            // Create a simplified glass-like material
-            const wheelMaterial = new THREE.MeshPhysicalMaterial({
+            // Create a glass-like material
+            const wheelMaterial = new THREE.MeshPhongMaterial({
                 color: 0xffffff,
-                metalness: 0.1,
-                roughness: 0.2,
-                transmission: 0.8,
+                specular: 0x111111,
+                shininess: 100,
                 transparent: true,
-                opacity: 0.9
+                opacity: 0.7
             });
             
             // Create the wheel mesh
             wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-            wheel.rotation.x = Math.PI / 2; // Rotate to be flat
             scene.add(wheel);
             
-            // Load font and create text
-            const fontLoader = new THREE.FontLoader();
-            
-            // Try to load the font with a fallback
-            fontLoader.load(
-                // Primary URL
-                'https://threejs.org/examples/fonts/helvetiker_bold.typeface.json',
-                // Success callback
-                function(font) {
-                    createMainTitle(font);
-                    createButtons(font);
-                    document.getElementById('loading').style.display = 'none';
-                },
-                // Progress callback
-                undefined,
-                // Error callback
-                function(err) {
-                    console.error('Error loading font:', err);
-                    document.getElementById('loading').innerHTML = 'Could not load font. Check console for details.';
-                }
-            );
+            // Add texts using simple planes with textures
+            addTextElements();
         }
         
-        // Create title text
-        function createMainTitle(font) {
-            const textOptions = {
-                font: font,
-                size: 0.28,
-                height: 0.05,
-                curveSegments: 6,
-                bevelEnabled: true,
-                bevelThickness: 0.01,
-                bevelSize: 0.01,
-                bevelSegments: 3
-            };
-            
-            // Title material
-            const textMaterial = new THREE.MeshStandardMaterial({
+        // Add text elements using simple meshes
+        function addTextElements() {
+            // Create main title area
+            const titleGeometry = new THREE.BoxGeometry(2, 0.7, 0.1);
+            const titleMaterial = new THREE.MeshPhongMaterial({
                 color: 0xffffff,
-                roughness: 0.1,
-                metalness: 0.2
-            });
-            
-            // "REALIZATION" text
-            const mainTextGeometry1 = new THREE.TextGeometry("REALIZATION", textOptions);
-            mainTextGeometry1.center();
-            
-            const mainText1 = new THREE.Mesh(mainTextGeometry1, textMaterial);
-            mainText1.position.set(0, 0.15, 0.23);
-            wheel.add(mainText1);
-            
-            // "TOOLKIT" text
-            const mainTextGeometry2 = new THREE.TextGeometry("TOOLKIT", textOptions);
-            mainTextGeometry2.center();
-            
-            const mainText2 = new THREE.Mesh(mainTextGeometry2, textMaterial);
-            mainText2.position.set(0, -0.25, 0.23);
-            wheel.add(mainText2);
-            
-            // Add simple circle for the spiral icon
-            const circleGeometry = new THREE.TorusGeometry(0.08, 0.02, 16, 32);
-            const circleMaterial = new THREE.MeshStandardMaterial({
-                color: 0xffffff,
-                roughness: 0.1,
-                metalness: 0.2
-            });
-            const circle = new THREE.Mesh(circleGeometry, circleMaterial);
-            circle.position.set(0, 0.5, 0.23);
-            wheel.add(circle);
-        }
-        
-        // Create the buttons with text
-        function createButtons(font) {
-            const buttonTextOptions = {
-                font: font,
-                size: 0.15,
-                height: 0.03,
-                curveSegments: 4,
-                bevelEnabled: true,
-                bevelThickness: 0.005,
-                bevelSize: 0.005,
-                bevelSegments: 2
-            };
-            
-            // Button material
-            const buttonMaterial = new THREE.MeshStandardMaterial({
-                color: 0xeeeeee,
-                roughness: 0.3,
-                metalness: 0.1,
                 transparent: true,
                 opacity: 0.9
             });
+            const titleMesh = new THREE.Mesh(titleGeometry, titleMaterial);
+            titleMesh.position.set(0, 0, 0.3);
+            wheel.add(titleMesh);
             
-            // ENROLL NOW button
-            createButtonWithText(
-                "ENROLL", 
-                "NOW",
-                -1.8, 0, 
-                0.8, 0.5, 
-                buttonMaterial, 
-                buttonTextOptions, 
-                font
-            );
-            
-            // EXPLORE the TOOLKIT button
-            createButtonWithText(
-                "EXPLORE", 
-                "the TOOLKIT",
-                1.8, 0, 
-                0.8, 0.6, 
-                buttonMaterial, 
-                buttonTextOptions, 
-                font
-            );
-            
-            // FIND your TOOLS button
-            createButtonWithText(
-                "FIND your", 
-                "TOOLS",
-                0, -2.15, 
-                1.2, 0.5, 
-                buttonMaterial, 
-                buttonTextOptions, 
-                font
-            );
-        }
-        
-        // Create a button with text
-        function createButtonWithText(text1, text2, x, y, width, height, material, textOptions, font) {
-            // Create rounded rectangle for button
-            const roundedRectShape = new THREE.Shape();
-            const radius = 0.15;
-            
-            roundedRectShape.moveTo(-width/2 + radius, -height/2);
-            roundedRectShape.lineTo(width/2 - radius, -height/2);
-            roundedRectShape.quadraticCurveTo(width/2, -height/2, width/2, -height/2 + radius);
-            roundedRectShape.lineTo(width/2, height/2 - radius);
-            roundedRectShape.quadraticCurveTo(width/2, height/2, width/2 - radius, height/2);
-            roundedRectShape.lineTo(-width/2 + radius, height/2);
-            roundedRectShape.quadraticCurveTo(-width/2, height/2, -width/2, height/2 - radius);
-            roundedRectShape.lineTo(-width/2, -height/2 + radius);
-            roundedRectShape.quadraticCurveTo(-width/2, -height/2, -width/2 + radius, -height/2);
-            
-            const buttonExtrudeSettings = {
-                depth: 0.06,
-                bevelEnabled: true,
-                bevelSegments: 2,
-                bevelSize: 0.02,
-                bevelThickness: 0.02
-            };
-            
-            const buttonGeometry = new THREE.ExtrudeGeometry(roundedRectShape, buttonExtrudeSettings);
-            const button = new THREE.Mesh(buttonGeometry, material.clone());
-            button.position.set(x, y, 0.1);
-            wheel.add(button);
-            
-            // Text material
-            const textMaterial = new THREE.MeshStandardMaterial({
-                color: 0xffffff,
-                roughness: 0.1,
-                metalness: 0.2
+            // Create ENROLL NOW button
+            const button1Geometry = new THREE.BoxGeometry(0.8, 0.5, 0.1);
+            const button1Material = new THREE.MeshPhongMaterial({
+                color: 0xeeeeee,
+                transparent: true,
+                opacity: 0.8
             });
+            const button1Mesh = new THREE.Mesh(button1Geometry, button1Material);
+            button1Mesh.position.set(-1.8, 0, 0.2);
+            wheel.add(button1Mesh);
             
-            // Add text to button
-            if (text1) {
-                const textGeo1 = new THREE.TextGeometry(text1, textOptions);
-                textGeo1.center();
-                const textMesh1 = new THREE.Mesh(textGeo1, textMaterial);
-                textMesh1.position.set(x, y + (text2 ? 0.12 : 0), 0.2);
-                wheel.add(textMesh1);
-            }
+            // Create EXPLORE button
+            const button2Geometry = new THREE.BoxGeometry(0.8, 0.6, 0.1);
+            const button2Material = button1Material.clone();
+            const button2Mesh = new THREE.Mesh(button2Geometry, button2Material);
+            button2Mesh.position.set(1.8, 0, 0.2);
+            wheel.add(button2Mesh);
             
-            if (text2) {
-                const textGeo2 = new THREE.TextGeometry(text2, textOptions);
-                textGeo2.center();
-                const textMesh2 = new THREE.Mesh(textGeo2, textMaterial);
-                textMesh2.position.set(x, y - 0.12, 0.2);
-                wheel.add(textMesh2);
-            }
+            // Create FIND button
+            const button3Geometry = new THREE.BoxGeometry(1.2, 0.5, 0.1);
+            const button3Material = button1Material.clone();
+            const button3Mesh = new THREE.Mesh(button3Geometry, button3Material);
+            button3Mesh.position.set(0, -2.15, 0.2);
+            wheel.add(button3Mesh);
+            
+            // Add a simple spiral icon (just a small disc)
+            const spiralGeometry = new THREE.CircleGeometry(0.1, 32);
+            const spiralMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+            const spiralMesh = new THREE.Mesh(spiralGeometry, spiralMaterial);
+            spiralMesh.position.set(0, 0.6, 0.3);
+            wheel.add(spiralMesh);
         }
         
         // Set up basic lights
@@ -315,6 +161,78 @@
             scene.add(ambientLight);
         }
         
+        // Simple mouse-based camera controls without using OrbitControls
+        function setupCameraControls() {
+            let isDragging = false;
+            let previousMousePosition = {
+                x: 0,
+                y: 0
+            };
+            
+            document.addEventListener('mousedown', function(e) {
+                isDragging = true;
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (isDragging) {
+                    const deltaMove = {
+                        x: e.clientX - previousMousePosition.x,
+                        y: e.clientY - previousMousePosition.y
+                    };
+                    
+                    // Rotate the wheel based on mouse movement
+                    if (wheel) {
+                        wheel.rotation.z += deltaMove.x * 0.01;
+                        wheel.rotation.x += deltaMove.y * 0.01;
+                    }
+                }
+                
+                previousMousePosition = {
+                    x: e.clientX,
+                    y: e.clientY
+                };
+            });
+            
+            document.addEventListener('mouseup', function(e) {
+                isDragging = false;
+            });
+            
+            // Add touch support
+            document.addEventListener('touchstart', function(e) {
+                isDragging = true;
+                previousMousePosition = {
+                    x: e.touches[0].clientX,
+                    y: e.touches[0].clientY
+                };
+                e.preventDefault();
+            });
+            
+            document.addEventListener('touchmove', function(e) {
+                if (isDragging) {
+                    const deltaMove = {
+                        x: e.touches[0].clientX - previousMousePosition.x,
+                        y: e.touches[0].clientY - previousMousePosition.y
+                    };
+                    
+                    // Rotate the wheel based on touch movement
+                    if (wheel) {
+                        wheel.rotation.z += deltaMove.x * 0.01;
+                        wheel.rotation.x += deltaMove.y * 0.01;
+                    }
+                    
+                    previousMousePosition = {
+                        x: e.touches[0].clientX,
+                        y: e.touches[0].clientY
+                    };
+                }
+                e.preventDefault();
+            });
+            
+            document.addEventListener('touchend', function(e) {
+                isDragging = false;
+            });
+        }
+        
         // Handle window resize
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -325,7 +243,12 @@
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
-            controls.update();
+            
+            // Add a very subtle constant rotation
+            if (wheel) {
+                wheel.rotation.z += 0.001;
+            }
+            
             renderer.render(scene, camera);
         }
         
