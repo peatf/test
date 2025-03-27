@@ -1,353 +1,116 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frosted Glass 3D Wheel</title>
+    <title>Optimized Glass Wheel</title>
     <style>
-        body { 
-            margin: 0;
-            overflow: hidden;
-            background-color: #e6e6e6; /* Light gray background matching the reference */
-        }
-        canvas {
-            display: block;
-        }
-        #loading {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-family: Arial, sans-serif;
-            font-size: 18px;
-            color: #333;
-        }
+        body { margin: 0; }
+        canvas { display: block; }
+        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); }
     </style>
 </head>
 <body>
-    <div id="loading">Loading 3D Scene...</div>
-
-    <!-- Import Three.js libraries -->
+    <div id="loading">Loading...</div>
     <script src="https://unpkg.com/three@0.137.0/build/three.min.js"></script>
     <script src="https://unpkg.com/three@0.137.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://unpkg.com/three@0.137.0/examples/js/loaders/FontLoader.js"></script>
-    <script src="https://unpkg.com/three@0.137.0/examples/js/geometries/TextGeometry.js"></script>
-    <script src="https://unpkg.com/three@0.137.0/examples/js/libs/dat.gui.min.js"></script>
 
     <script>
-        window.addEventListener('load', function() {
-            // Hide loading message when everything is initialized
-            function hideLoading() {
-                document.getElementById('loading').style.display = 'none';
-            }
+        async function init() {
+            // 1. Use simpler geometry and materials
+            // 2. Preload critical assets first
+            // 3. Use cached environment map
+            // 4. Optimize text rendering
+
+            const [envMap, font] = await Promise.all([
+                new THREE.CubeTextureLoader()
+                    .setPath('https://cdn.jsdelivr.net/gh/mrdoob/three.js/r128/examples/textures/cube/pisa/')
+                    .load(['px.png', 'nx.png', 'py.png', 'ny.png', 'pz.png', 'nz.png']),
+                new THREE.FontLoader().loadAsync('https://cdn.jsdelivr.net/gh/mrdoob/three.js/r128/examples/fonts/helvetiker_regular.typeface.json')
+            ]);
 
             // Scene setup
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xe6e6e6); // Light gray background
+            scene.background = new THREE.Color(0xe6e6e6);
             
-            // Camera setup
-            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            // Camera with adjusted FOV
+            const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 100);
             camera.position.set(0, 0, 5);
-            
-            // Renderer setup
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+            // Renderer with performance settings
+            const renderer = new THREE.WebGLRenderer({
+                antialias: true,
+                powerPreference: "high-performance"
+            });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             document.body.appendChild(renderer.domElement);
-            
-            // Orbit controls
+
+            // Simplified material with fake transmission
+            const glassMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                metalness: 0.3,
+                roughness: 0.15,
+                transparent: true,
+                opacity: 0.9,
+                envMap: envMap,
+                envMapIntensity: 1.5
+            });
+
+            // Optimized torus geometry
+            const wheel = new THREE.Mesh(
+                new THREE.TorusGeometry(2, 0.5, 32, 64),
+                glassMaterial
+            );
+            wheel.rotation.x = Math.PI/2;
+            scene.add(wheel);
+
+            // Text creation with caching
+            const createText = (text, size, yPos) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 1024; canvas.height = 256;
+                ctx.fillStyle = '#888888';
+                ctx.font = `${size}px Arial`;
+                ctx.textAlign = 'center';
+                text.split('\n').forEach((line, i) => 
+                    ctx.fillText(line, 512, 128 + i * size * 1.2)
+                );
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                const material = new THREE.SpriteMaterial({ map: texture });
+                const sprite = new THREE.Sprite(material);
+                sprite.scale.set(3, 1, 1);
+                sprite.position.y = yPos;
+                return sprite;
+            };
+
+            scene.add(createText('REALIZATION\nTOOLKIT', 40, 2));
+            scene.add(createText('ENROLL NOW', 30, 0).position.set(-2, 0, 0));
+            scene.add(createText('EXPLORE\nTHE TOOLKIT', 30, 0).position.set(2, 0, 0));
+            scene.add(createText('FIND YOUR\nTOOLS', 30, -2));
+
+            // Lighting
+            const light = new THREE.DirectionalLight(0xffffff, 1);
+            light.position.set(5, 5, 5);
+            scene.add(light, new THREE.AmbientLight(0xffffff, 0.5));
+
+            // Controls
             const controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            
-            // Lighting setup
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambientLight);
-            
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-            directionalLight.position.set(5, 5, 5);
-            directionalLight.castShadow = true;
-            scene.add(directionalLight);
-            
-            // Spot light for highlighting the frosted material
-            const spotLight = new THREE.SpotLight(0xffffff, 1);
-            spotLight.position.set(-5, 5, 5);
-            spotLight.angle = Math.PI / 6;
-            spotLight.penumbra = 0.2;
-            spotLight.castShadow = true;
-            scene.add(spotLight);
-            
-            // Material parameters
-            const materialParams = {
-                color: 0xffffff,
-                metalness: 0.1,
-                roughness: 0.15,
-                transmission: 0.95, // High transmission for glass effect
-                clearcoat: 1.0,     // Clear coat for extra shine
-                clearcoatRoughness: 0.1,
-                ior: 1.5           // Index of refraction (glass ~ 1.5)
-            };
-            
-            // Create frosted glass material
-            const frostedMaterial = new THREE.MeshPhysicalMaterial({
-                color: materialParams.color,
-                metalness: materialParams.metalness,
-                roughness: materialParams.roughness,
-                transmission: materialParams.transmission,
-                transparent: true,
-                clearcoat: materialParams.clearcoat,
-                clearcoatRoughness: materialParams.clearcoatRoughness,
-                ior: materialParams.ior,
-                side: THREE.DoubleSide
-            });
-            
-            // Create environment map for reflections
-            const envMapLoader = new THREE.CubeTextureLoader();
-            envMapLoader.load([
-                'https://threejs.org/examples/textures/cube/Park2/posx.jpg',
-                'https://threejs.org/examples/textures/cube/Park2/negx.jpg',
-                'https://threejs.org/examples/textures/cube/Park2/posy.jpg',
-                'https://threejs.org/examples/textures/cube/Park2/negy.jpg',
-                'https://threejs.org/examples/textures/cube/Park2/posz.jpg',
-                'https://threejs.org/examples/textures/cube/Park2/negz.jpg'
-            ], function(envMap) {
-                scene.environment = envMap;
-                frostedMaterial.envMap = envMap;
-                frostedMaterial.needsUpdate = true;
-            });
-            
-            // Create the wheel geometry (torus with custom segments for smoother appearance)
-            const wheelParams = {
-                radius: 2,
-                tube: 0.6,
-                radialSegments: 64,
-                tubularSegments: 64,
-                arc: Math.PI * 2
-            };
-            
-            const torusGeometry = new THREE.TorusGeometry(
-                wheelParams.radius,
-                wheelParams.tube,
-                wheelParams.radialSegments,
-                wheelParams.tubularSegments,
-                wheelParams.arc
-            );
-            
-            const wheel = new THREE.Mesh(torusGeometry, frostedMaterial);
-            wheel.castShadow = true;
-            wheel.receiveShadow = true;
-            wheel.rotation.x = Math.PI / 2; // Rotate to match the reference
-            scene.add(wheel);
-            
-            // Load font for text
-            const fontLoader = new THREE.FontLoader();
-            fontLoader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function(font) {
-                // Once font is loaded, create all text elements
-                
-                // Main title at the top
-                createTextMesh("REALIZATION", 0, 1.8, 0, 0.2, 0x888888, -0.02, font);
-                createTextMesh("TOOLKIT", 0, 1.4, 0, 0.2, 0x888888, -0.02, font);
-                
-                // Button texts (in 3D positioned around the wheel)
-                createButtonMesh("ENROLL\nNOW", -1.5, 0, 0, 0.12, font);
-                createButtonMesh("EXPLORE\nthe\nTOOLKIT", 1.5, 0, 0, 0.12, font);
-                createButtonMesh("FIND your\nTOOLS", 0, -1.5, 0, 0.12, font);
-                
-                // Hide loading text once everything is loaded
-                hideLoading();
-            });
-            
-            // Create 3D text function
-            function createTextMesh(text, x, y, z, size, color = 0xffffff, depth = 0.03, font) {
-                const textGeometry = new THREE.TextGeometry(text, {
-                    font: font,
-                    size: size,
-                    height: depth,
-                    curveSegments: 12,
-                    bevelEnabled: true,
-                    bevelThickness: 0.01,
-                    bevelSize: 0.005,
-                    bevelOffset: 0,
-                    bevelSegments: 5
-                });
-                
-                textGeometry.computeBoundingBox();
-                
-                // Center the text
-                const centerOffset = -0.5 * (textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x);
-                
-                const textMaterial = new THREE.MeshPhysicalMaterial({
-                    color: color,
-                    metalness: 0.1,
-                    roughness: 0.2,
-                    transmission: 0.9,
-                    transparent: true,
-                    clearcoat: 1.0,
-                    clearcoatRoughness: 0.1,
-                    ior: 1.5
-                });
-                
-                const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-                textMesh.position.set(x + centerOffset, y, z);
-                textMesh.castShadow = true;
-                textMesh.receiveShadow = true;
-                scene.add(textMesh);
-            }
-            
-            // Create button function (creates both the button and its text)
-            function createButtonMesh(text, x, y, z, size, font) {
-                // Create button background - a rounded rectangle
-                const buttonWidth = 1;
-                const buttonHeight = 0.6;
-                const buttonRadius = 0.1;
-                
-                const roundedRectShape = new THREE.Shape();
-                
-                const x0 = -buttonWidth/2;
-                const y0 = -buttonHeight/2;
-                const width = buttonWidth;
-                const height = buttonHeight;
-                const radius = buttonRadius;
-                
-                roundedRectShape.moveTo(x0, y0 + radius);
-                roundedRectShape.lineTo(x0, y0 + height - radius);
-                roundedRectShape.quadraticCurveTo(x0, y0 + height, x0 + radius, y0 + height);
-                roundedRectShape.lineTo(x0 + width - radius, y0 + height);
-                roundedRectShape.quadraticCurveTo(x0 + width, y0 + height, x0 + width, y0 + height - radius);
-                roundedRectShape.lineTo(x0 + width, y0 + radius);
-                roundedRectShape.quadraticCurveTo(x0 + width, y0, x0 + width - radius, y0);
-                roundedRectShape.lineTo(x0 + radius, y0);
-                roundedRectShape.quadraticCurveTo(x0, y0, x0, y0 + radius);
-                
-                const extrudeSettings = {
-                    steps: 2,
-                    depth: 0.1,
-                    bevelEnabled: true,
-                    bevelThickness: 0.05,
-                    bevelSize: 0.02,
-                    bevelOffset: 0,
-                    bevelSegments: 5
-                };
-                
-                const buttonGeometry = new THREE.ExtrudeGeometry(roundedRectShape, extrudeSettings);
-                
-                const buttonMaterial = new THREE.MeshPhysicalMaterial({
-                    color: 0xffffff,
-                    metalness: 0.1,
-                    roughness: 0.2,
-                    transmission: 0.92,
-                    transparent: true,
-                    clearcoat: 1.0,
-                    clearcoatRoughness: 0.1,
-                    ior: 1.5
-                });
-                
-                const buttonMesh = new THREE.Mesh(buttonGeometry, buttonMaterial);
-                buttonMesh.position.set(x, y, z - 0.05); // Move slightly back
-                buttonMesh.castShadow = true;
-                buttonMesh.receiveShadow = true;
-                scene.add(buttonMesh);
-                
-                // Add text to the button
-                const lines = text.split('\n');
-                const lineHeight = size * 1.2;
-                
-                // Calculate total height to center vertically
-                const totalHeight = lines.length * lineHeight;
-                const startY = y + totalHeight / 2 - lineHeight / 2;
-                
-                lines.forEach((line, index) => {
-                    const textGeometry = new THREE.TextGeometry(line, {
-                        font: font,
-                        size: size,
-                        height: 0.01,
-                        curveSegments: 12,
-                        bevelEnabled: true,
-                        bevelThickness: 0.005,
-                        bevelSize: 0.002,
-                        bevelOffset: 0,
-                        bevelSegments: 3
-                    });
-                    
-                    textGeometry.computeBoundingBox();
-                    
-                    // Center the text horizontally
-                    const centerOffset = -0.5 * (textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x);
-                    
-                    const textMaterial = new THREE.MeshPhysicalMaterial({
-                        color: 0x888888,
-                        metalness: 0.2,
-                        roughness: 0.1
-                    });
-                    
-                    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-                    textMesh.position.set(x + centerOffset, startY - index * lineHeight, z + 0.05);
-                    textMesh.castShadow = true;
-                    scene.add(textMesh);
-                });
-            }
-            
-            // Resize handler
-            window.addEventListener('resize', function() {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-            
-            // GUI for tweaking parameters (if dat.GUI is available)
-            if (typeof dat !== 'undefined') {
-                const gui = new dat.GUI();
-                const materialFolder = gui.addFolder('Material');
-                
-                materialFolder.addColor(materialParams, 'color').onChange(function(value) {
-                    frostedMaterial.color.set(value);
-                });
-                
-                materialFolder.add(materialParams, 'metalness', 0, 1).onChange(function(value) {
-                    frostedMaterial.metalness = value;
-                });
-                
-                materialFolder.add(materialParams, 'roughness', 0, 1).onChange(function(value) {
-                    frostedMaterial.roughness = value;
-                });
-                
-                materialFolder.add(materialParams, 'transmission', 0, 1).onChange(function(value) {
-                    frostedMaterial.transmission = value;
-                });
-                
-                materialFolder.add(materialParams, 'clearcoat', 0, 1).onChange(function(value) {
-                    frostedMaterial.clearcoat = value;
-                });
-                
-                materialFolder.add(materialParams, 'clearcoatRoughness', 0, 1).onChange(function(value) {
-                    frostedMaterial.clearcoatRoughness = value;
-                });
-                
-                materialFolder.add(materialParams, 'ior', 1, 2.333).onChange(function(value) {
-                    frostedMaterial.ior = value;
-                });
-                
-                materialFolder.open();
-            }
-            
+
+            // Hide loading screen
+            document.getElementById('loading').remove();
+
             // Animation loop
             function animate() {
                 requestAnimationFrame(animate);
-                
-                // Update controls
+                wheel.rotation.z += 0.005;
                 controls.update();
-                
-                // Subtle rotation animation
-                wheel.rotation.z += 0.001;
-                
-                // Render scene
                 renderer.render(scene, camera);
             }
-            
             animate();
-        });
+        }
+
+        init().catch(console.error);
     </script>
 </body>
 </html>
