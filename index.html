@@ -13,103 +13,165 @@
         canvas {
             display: block;
         }
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Arial, sans-serif;
+            font-size: 18px;
+            color: #333;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 100;
+        }
     </style>
+    <!-- Load Three.js core library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/three.min.js"></script>
+    
+    <!-- Load required Three.js extensions -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/loaders/FontLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/geometries/TextGeometry.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/shaders/FXAAShader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/loaders/RGBELoader.js"></script>
 </head>
 <body>
-    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.159.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.159.0/examples/jsm/"
-            }
+    <div id="loading">Loading 3D Wheel...</div>
+    
+    <script>
+        // Global variables
+        let scene, camera, renderer, composer, controls;
+        let fxaaPass, bloomPass;
+        
+        // Initialize the scene
+        function init() {
+            // Scene setup
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 8);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0;
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            document.body.appendChild(renderer.domElement);
+            
+            // Post-processing
+            composer = new EffectComposer(renderer);
+            const renderPass = new RenderPass(scene, camera);
+            composer.addPass(renderPass);
+            
+            // FXAA anti-aliasing
+            fxaaPass = new ShaderPass(FXAAShader);
+            const pixelRatio = renderer.getPixelRatio();
+            fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * pixelRatio);
+            fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * pixelRatio);
+            composer.addPass(fxaaPass);
+            
+            // Subtle bloom effect
+            bloomPass = new UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                0.2,   // strength
+                0.4,   // radius
+                0.85   // threshold
+            );
+            composer.addPass(bloomPass);
+            
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // Set up a simple environment for reflections instead of using HDR
+            setupSimpleEnvironment();
+            
+            // Create the wheel
+            createWheel();
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize, false);
+            
+            // Start animation loop
+            animate();
         }
-    </script>
-    <script type="module">
-        import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
-        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
-        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
-        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-        import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
-
-        // Scene setup
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 0, 8);
-
-        // Renderer
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.0;
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-        document.body.appendChild(renderer.domElement);
-
-        // Post-processing
-        const composer = new EffectComposer(renderer);
-        const renderPass = new RenderPass(scene, camera);
-        composer.addPass(renderPass);
-
-        // FXAA
-        const fxaaPass = new ShaderPass(FXAAShader);
-        const pixelRatio = renderer.getPixelRatio();
-        fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * pixelRatio);
-        fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * pixelRatio);
-        composer.addPass(fxaaPass);
-
-        // Subtle bloom effect
-        const bloomPass = new UnrealBloomPass(
-            new THREE.Vector2(window.innerWidth, window.innerHeight),
-            0.2,   // strength
-            0.4,   // radius
-            0.85   // threshold
-        );
-        composer.addPass(bloomPass);
-
-        // Controls
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-
-        // Environment map for realistic reflections
-        new RGBELoader()
-            .load('https://threejs.org/examples/textures/equirectangular/venice_sunset_1k.hdr', function(texture) {
-                texture.mapping = THREE.EquirectangularReflectionMapping;
-                scene.environment = texture;
-                scene.background = new THREE.Color(0xcccccc); // Light gray background
-                
-                // Create the wheel after environment is loaded
-                createWheel();
+        
+        // Set up a simple environment for reflections without using HDR
+        function setupSimpleEnvironment() {
+            // Create a simple gradient background
+            scene.background = new THREE.Color(0xcccccc);
+            
+            // Create a simple environment map using a cube texture
+            const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256);
+            cubeRenderTarget.texture.type = THREE.HalfFloatType;
+            
+            const cubeCamera = new THREE.CubeCamera(0.1, 1000, cubeRenderTarget);
+            scene.add(cubeCamera);
+            
+            // Create a simple scene to capture as environment
+            const envScene = new THREE.Scene();
+            
+            // Add a gradient to the environment
+            const topColor = new THREE.Color(0xffffff);
+            const bottomColor = new THREE.Color(0xaaaaaa);
+            
+            // Create a large sphere for the environment
+            const envGeometry = new THREE.SphereGeometry(100, 32, 32);
+            const envMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    topColor: { value: topColor },
+                    bottomColor: { value: bottomColor }
+                },
+                vertexShader: `
+                    varying vec3 vWorldPosition;
+                    void main() {
+                        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                        vWorldPosition = worldPosition.xyz;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform vec3 topColor;
+                    uniform vec3 bottomColor;
+                    varying vec3 vWorldPosition;
+                    void main() {
+                        float h = normalize(vWorldPosition).y * 0.5 + 0.5;
+                        gl_FragColor = vec4(mix(bottomColor, topColor, h), 1.0);
+                    }
+                `,
+                side: THREE.BackSide
             });
-
-        // Main function to create the wheel
+            
+            const envMesh = new THREE.Mesh(envGeometry, envMaterial);
+            envScene.add(envMesh);
+            
+            // Render the environment to the cube texture
+            cubeCamera.update(renderer, envScene);
+            
+            // Set the environment map for the scene
+            scene.environment = cubeRenderTarget.texture;
+            
+            // Hide loading message
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        // Create the 3D wheel
         function createWheel() {
             // Wheel dimensions
             const outerRadius = 3;
             const innerRadius = 0.8;
             const thickness = 0.4;
-            const segments = 128;
+            const segments = 64; // Reduced for better performance
             
-            // Create ring geometry
-            const ringGeometry = new THREE.RingGeometry(innerRadius, outerRadius, segments);
-            
-            // Extrude the ring to create a 3D shape
-            const extrudeSettings = {
-                depth: thickness,
-                bevelEnabled: true,
-                bevelSegments: 6,
-                bevelSize: 0.1,
-                bevelThickness: 0.05,
-                curveSegments: segments
-            };
-            
-            // Create a shape from the ring geometry
+            // Create a shape for the ring
             const shape = new THREE.Shape();
             // Outer circle
             shape.absarc(0, 0, outerRadius, 0, Math.PI * 2, false);
@@ -119,21 +181,31 @@
             holePath.absarc(0, 0, innerRadius, 0, Math.PI * 2, true);
             shape.holes.push(holePath);
             
-            // Extrude the shape
+            // Extrude settings
+            const extrudeSettings = {
+                depth: thickness,
+                bevelEnabled: true,
+                bevelSegments: 5,
+                bevelSize: 0.1,
+                bevelThickness: 0.05,
+                curveSegments: segments
+            };
+            
+            // Create the extruded geometry
             const wheelGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
             wheelGeometry.center();
             
             // Create the frosted glass material
             const wheelMaterial = new THREE.MeshPhysicalMaterial({
                 color: 0xffffff,
-                metalness: 0.0,  // Low metalness for glass
-                roughness: 0.15, // Slightly rough for frosted effect
-                transmission: 0.85, // Transparency level
-                thickness: thickness, // Physical thickness for refraction
+                metalness: 0.0,        // Low metalness for glass
+                roughness: 0.15,       // Slightly rough for frosted effect
+                transmission: 0.85,    // Transparency level
+                thickness: thickness,  // Physical thickness for refraction
                 envMapIntensity: 1.0,
                 clearcoat: 1.0,
                 clearcoatRoughness: 0.2,
-                ior: 1.5, // Glass IOR
+                ior: 1.5,              // Glass IOR
                 reflectivity: 0.3,
                 transparent: true,
                 opacity: 0.9
@@ -151,10 +223,11 @@
                 createButtons(font, wheel);
             });
             
-            // Add lights
+            // Setup lighting
             setupLights();
         }
         
+        // Create the main title text
         function createMainTitle(font, wheel) {
             const textOptions = {
                 font: font,
@@ -208,6 +281,7 @@
             wheel.add(spiral);
         }
         
+        // Create the buttons with text
         function createButtons(font, wheel) {
             const buttonTextOptions = {
                 font: font,
@@ -270,6 +344,7 @@
             );
         }
         
+        // Create a button with text
         function createButtonWithText(text1, text2, x, y, width, height, material, textOptions, font, parent) {
             // Create rounded rectangle for button
             const roundedRectShape = new THREE.Shape();
@@ -309,7 +384,6 @@
             }
             
             if (text2) {
-                let displayText = text2;
                 // Handle multiline text
                 if (text2.includes('\n')) {
                     const textParts = text2.split('\n');
@@ -334,8 +408,9 @@
             return button;
         }
         
+        // Set up lights for the scene
         function setupLights() {
-            // Main directional light (like sun)
+            // Main directional light
             const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
             directionalLight.position.set(5, 5, 5);
             scene.add(directionalLight);
@@ -356,8 +431,6 @@
         }
         
         // Handle window resize
-        window.addEventListener('resize', onWindowResize, false);
-        
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
@@ -365,6 +438,7 @@
             composer.setSize(window.innerWidth, window.innerHeight);
             
             // Update FXAA pass
+            const pixelRatio = renderer.getPixelRatio();
             fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * pixelRatio);
             fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * pixelRatio);
         }
@@ -376,7 +450,8 @@
             composer.render();
         }
         
-        animate();
+        // Initialize everything when the page loads
+        window.onload = init;
     </script>
 </body>
 </html>
