@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frosted Glass 3D Wheel</title>
+    <title>Simple Frosted Glass 3D Wheel</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
             background-color: #cccccc;
+            font-family: Arial, sans-serif;
         }
         canvas {
             display: block;
@@ -18,84 +19,51 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-family: Arial, sans-serif;
-            font-size: 18px;
-            color: #333;
             background-color: rgba(255, 255, 255, 0.8);
             padding: 20px;
             border-radius: 10px;
             z-index: 100;
         }
     </style>
-    <!-- Load Three.js core library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/three.min.js"></script>
-    
-    <!-- Load required Three.js extensions -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/loaders/FontLoader.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/geometries/TextGeometry.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/postprocessing/EffectComposer.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/postprocessing/RenderPass.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/postprocessing/ShaderPass.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/shaders/FXAAShader.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/examples/js/loaders/RGBELoader.js"></script>
 </head>
 <body>
     <div id="loading">Loading 3D Wheel...</div>
     
+    <!-- Using full URLs to CDN resources -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/examples/js/loaders/FontLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/examples/js/geometries/TextGeometry.js"></script>
+    
     <script>
         // Global variables
-        let scene, camera, renderer, composer, controls;
-        let fxaaPass, bloomPass;
+        let scene, camera, renderer, controls;
+        let wheel;
         
         // Initialize the scene
         function init() {
             // Scene setup
             scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xcccccc);
+            
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, 0, 8);
             
-            // Renderer
+            // Renderer with basic settings
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.0;
-            renderer.outputColorSpace = THREE.SRGBColorSpace;
             document.body.appendChild(renderer.domElement);
             
-            // Post-processing
-            composer = new EffectComposer(renderer);
-            const renderPass = new RenderPass(scene, camera);
-            composer.addPass(renderPass);
-            
-            // FXAA anti-aliasing
-            fxaaPass = new ShaderPass(FXAAShader);
-            const pixelRatio = renderer.getPixelRatio();
-            fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * pixelRatio);
-            fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * pixelRatio);
-            composer.addPass(fxaaPass);
-            
-            // Subtle bloom effect
-            bloomPass = new UnrealBloomPass(
-                new THREE.Vector2(window.innerWidth, window.innerHeight),
-                0.2,   // strength
-                0.4,   // radius
-                0.85   // threshold
-            );
-            composer.addPass(bloomPass);
-            
-            // Controls
-            controls = new OrbitControls(camera, renderer.domElement);
+            // Basic orbit controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            
-            // Set up a simple environment for reflections instead of using HDR
-            setupSimpleEnvironment();
             
             // Create the wheel
             createWheel();
+            
+            // Set up lighting
+            setupLights();
             
             // Handle window resize
             window.addEventListener('resize', onWindowResize, false);
@@ -104,79 +72,18 @@
             animate();
         }
         
-        // Set up a simple environment for reflections without using HDR
-        function setupSimpleEnvironment() {
-            // Create a simple gradient background
-            scene.background = new THREE.Color(0xcccccc);
-            
-            // Create a simple environment map using a cube texture
-            const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256);
-            cubeRenderTarget.texture.type = THREE.HalfFloatType;
-            
-            const cubeCamera = new THREE.CubeCamera(0.1, 1000, cubeRenderTarget);
-            scene.add(cubeCamera);
-            
-            // Create a simple scene to capture as environment
-            const envScene = new THREE.Scene();
-            
-            // Add a gradient to the environment
-            const topColor = new THREE.Color(0xffffff);
-            const bottomColor = new THREE.Color(0xaaaaaa);
-            
-            // Create a large sphere for the environment
-            const envGeometry = new THREE.SphereGeometry(100, 32, 32);
-            const envMaterial = new THREE.ShaderMaterial({
-                uniforms: {
-                    topColor: { value: topColor },
-                    bottomColor: { value: bottomColor }
-                },
-                vertexShader: `
-                    varying vec3 vWorldPosition;
-                    void main() {
-                        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                        vWorldPosition = worldPosition.xyz;
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                    }
-                `,
-                fragmentShader: `
-                    uniform vec3 topColor;
-                    uniform vec3 bottomColor;
-                    varying vec3 vWorldPosition;
-                    void main() {
-                        float h = normalize(vWorldPosition).y * 0.5 + 0.5;
-                        gl_FragColor = vec4(mix(bottomColor, topColor, h), 1.0);
-                    }
-                `,
-                side: THREE.BackSide
-            });
-            
-            const envMesh = new THREE.Mesh(envGeometry, envMaterial);
-            envScene.add(envMesh);
-            
-            // Render the environment to the cube texture
-            cubeCamera.update(renderer, envScene);
-            
-            // Set the environment map for the scene
-            scene.environment = cubeRenderTarget.texture;
-            
-            // Hide loading message
-            document.getElementById('loading').style.display = 'none';
-        }
-        
         // Create the 3D wheel
         function createWheel() {
             // Wheel dimensions
             const outerRadius = 3;
             const innerRadius = 0.8;
             const thickness = 0.4;
-            const segments = 64; // Reduced for better performance
+            const segments = 48;
             
-            // Create a shape for the ring
+            // Create ring shape
             const shape = new THREE.Shape();
-            // Outer circle
             shape.absarc(0, 0, outerRadius, 0, Math.PI * 2, false);
             
-            // Inner hole (counter-clockwise)
             const holePath = new THREE.Path();
             holePath.absarc(0, 0, innerRadius, 0, Math.PI * 2, true);
             shape.holes.push(holePath);
@@ -185,7 +92,7 @@
             const extrudeSettings = {
                 depth: thickness,
                 bevelEnabled: true,
-                bevelSegments: 5,
+                bevelSegments: 3,
                 bevelSize: 0.1,
                 bevelThickness: 0.05,
                 curveSegments: segments
@@ -195,116 +102,112 @@
             const wheelGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
             wheelGeometry.center();
             
-            // Create the frosted glass material
+            // Create a simplified glass-like material
             const wheelMaterial = new THREE.MeshPhysicalMaterial({
                 color: 0xffffff,
-                metalness: 0.0,        // Low metalness for glass
-                roughness: 0.15,       // Slightly rough for frosted effect
-                transmission: 0.85,    // Transparency level
-                thickness: thickness,  // Physical thickness for refraction
-                envMapIntensity: 1.0,
-                clearcoat: 1.0,
-                clearcoatRoughness: 0.2,
-                ior: 1.5,              // Glass IOR
-                reflectivity: 0.3,
+                metalness: 0.1,
+                roughness: 0.2,
+                transmission: 0.8,
                 transparent: true,
                 opacity: 0.9
             });
             
             // Create the wheel mesh
-            const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
             wheel.rotation.x = Math.PI / 2; // Rotate to be flat
             scene.add(wheel);
             
             // Load font and create text
-            const fontLoader = new FontLoader();
-            fontLoader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', function(font) {
-                createMainTitle(font, wheel);
-                createButtons(font, wheel);
-            });
+            const fontLoader = new THREE.FontLoader();
             
-            // Setup lighting
-            setupLights();
+            // Try to load the font with a fallback
+            fontLoader.load(
+                // Primary URL
+                'https://threejs.org/examples/fonts/helvetiker_bold.typeface.json',
+                // Success callback
+                function(font) {
+                    createMainTitle(font);
+                    createButtons(font);
+                    document.getElementById('loading').style.display = 'none';
+                },
+                // Progress callback
+                undefined,
+                // Error callback
+                function(err) {
+                    console.error('Error loading font:', err);
+                    document.getElementById('loading').innerHTML = 'Could not load font. Check console for details.';
+                }
+            );
         }
         
-        // Create the main title text
-        function createMainTitle(font, wheel) {
+        // Create title text
+        function createMainTitle(font) {
             const textOptions = {
                 font: font,
                 size: 0.28,
                 height: 0.05,
-                curveSegments: 12,
+                curveSegments: 6,
                 bevelEnabled: true,
                 bevelThickness: 0.01,
                 bevelSize: 0.01,
-                bevelOffset: 0,
                 bevelSegments: 3
             };
             
-            // Main title text "REALIZATION"
-            const mainTextGeometry1 = new TextGeometry("REALIZATION", textOptions);
-            mainTextGeometry1.center();
-            
-            const textMaterial = new THREE.MeshPhysicalMaterial({
+            // Title material
+            const textMaterial = new THREE.MeshStandardMaterial({
                 color: 0xffffff,
-                metalness: 0.1,
                 roughness: 0.1,
-                transmission: 0.3,
-                clearcoat: 1.0,
-                envMapIntensity: 1.0
+                metalness: 0.2
             });
+            
+            // "REALIZATION" text
+            const mainTextGeometry1 = new THREE.TextGeometry("REALIZATION", textOptions);
+            mainTextGeometry1.center();
             
             const mainText1 = new THREE.Mesh(mainTextGeometry1, textMaterial);
             mainText1.position.set(0, 0.15, 0.23);
             wheel.add(mainText1);
             
             // "TOOLKIT" text
-            const mainTextGeometry2 = new TextGeometry("TOOLKIT", textOptions);
+            const mainTextGeometry2 = new THREE.TextGeometry("TOOLKIT", textOptions);
             mainTextGeometry2.center();
             
             const mainText2 = new THREE.Mesh(mainTextGeometry2, textMaterial);
             mainText2.position.set(0, -0.25, 0.23);
             wheel.add(mainText2);
             
-            // Add small spiral icon
-            const spiralGeometry = new THREE.TorusKnotGeometry(0.08, 0.02, 100, 16);
-            const spiralMaterial = new THREE.MeshPhysicalMaterial({
+            // Add simple circle for the spiral icon
+            const circleGeometry = new THREE.TorusGeometry(0.08, 0.02, 16, 32);
+            const circleMaterial = new THREE.MeshStandardMaterial({
                 color: 0xffffff,
-                metalness: 0.1,
                 roughness: 0.1,
-                transmission: 0.5,
-                clearcoat: 1.0
+                metalness: 0.2
             });
-            const spiral = new THREE.Mesh(spiralGeometry, spiralMaterial);
-            spiral.position.set(0, 0.5, 0.23);
-            spiral.scale.set(1, 1, 0.5);
-            wheel.add(spiral);
+            const circle = new THREE.Mesh(circleGeometry, circleMaterial);
+            circle.position.set(0, 0.5, 0.23);
+            wheel.add(circle);
         }
         
         // Create the buttons with text
-        function createButtons(font, wheel) {
+        function createButtons(font) {
             const buttonTextOptions = {
                 font: font,
                 size: 0.15,
                 height: 0.03,
-                curveSegments: 8,
+                curveSegments: 4,
                 bevelEnabled: true,
                 bevelThickness: 0.005,
                 bevelSize: 0.005,
-                bevelOffset: 0,
                 bevelSegments: 2
             };
             
-            // Create button backgrounds
-            const buttonMaterial = new THREE.MeshPhysicalMaterial({
-                color: 0xffffff,
-                metalness: 0.0,
-                roughness: 0.2,
-                transmission: 0.8,
-                clearcoat: 1.0,
-                envMapIntensity: 0.8,
+            // Button material
+            const buttonMaterial = new THREE.MeshStandardMaterial({
+                color: 0xeeeeee,
+                roughness: 0.3,
+                metalness: 0.1,
                 transparent: true,
-                opacity: 0.85
+                opacity: 0.9
             });
             
             // ENROLL NOW button
@@ -315,20 +218,18 @@
                 0.8, 0.5, 
                 buttonMaterial, 
                 buttonTextOptions, 
-                font, 
-                wheel
+                font
             );
             
             // EXPLORE the TOOLKIT button
             createButtonWithText(
                 "EXPLORE", 
-                "the\nTOOLKIT",
+                "the TOOLKIT",
                 1.8, 0, 
                 0.8, 0.6, 
                 buttonMaterial, 
                 buttonTextOptions, 
-                font, 
-                wheel
+                font
             );
             
             // FIND your TOOLS button
@@ -339,13 +240,12 @@
                 1.2, 0.5, 
                 buttonMaterial, 
                 buttonTextOptions, 
-                font, 
-                wheel
+                font
             );
         }
         
         // Create a button with text
-        function createButtonWithText(text1, text2, x, y, width, height, material, textOptions, font, parent) {
+        function createButtonWithText(text1, text2, x, y, width, height, material, textOptions, font) {
             // Create rounded rectangle for button
             const roundedRectShape = new THREE.Shape();
             const radius = 0.15;
@@ -363,67 +263,52 @@
             const buttonExtrudeSettings = {
                 depth: 0.06,
                 bevelEnabled: true,
-                bevelSegments: 3,
+                bevelSegments: 2,
                 bevelSize: 0.02,
                 bevelThickness: 0.02
             };
             
             const buttonGeometry = new THREE.ExtrudeGeometry(roundedRectShape, buttonExtrudeSettings);
-            const button = new THREE.Mesh(buttonGeometry, material);
+            const button = new THREE.Mesh(buttonGeometry, material.clone());
             button.position.set(x, y, 0.1);
-            parent.add(button);
+            wheel.add(button);
+            
+            // Text material
+            const textMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                roughness: 0.1,
+                metalness: 0.2
+            });
             
             // Add text to button
             if (text1) {
-                const textGeo1 = new TextGeometry(text1, textOptions);
+                const textGeo1 = new THREE.TextGeometry(text1, textOptions);
                 textGeo1.center();
-                const textMesh1 = new THREE.Mesh(textGeo1, material.clone());
-                textMesh1.material.transmission = 0.2;
+                const textMesh1 = new THREE.Mesh(textGeo1, textMaterial);
                 textMesh1.position.set(x, y + (text2 ? 0.12 : 0), 0.2);
-                parent.add(textMesh1);
+                wheel.add(textMesh1);
             }
             
             if (text2) {
-                // Handle multiline text
-                if (text2.includes('\n')) {
-                    const textParts = text2.split('\n');
-                    for (let i = 0; i < textParts.length; i++) {
-                        const textGeo = new TextGeometry(textParts[i], textOptions);
-                        textGeo.center();
-                        const textMesh = new THREE.Mesh(textGeo, material.clone());
-                        textMesh.material.transmission = 0.2;
-                        textMesh.position.set(x, y - 0.12 * i, 0.2);
-                        parent.add(textMesh);
-                    }
-                } else {
-                    const textGeo2 = new TextGeometry(text2, textOptions);
-                    textGeo2.center();
-                    const textMesh2 = new THREE.Mesh(textGeo2, material.clone());
-                    textMesh2.material.transmission = 0.2;
-                    textMesh2.position.set(x, y - 0.12, 0.2);
-                    parent.add(textMesh2);
-                }
+                const textGeo2 = new THREE.TextGeometry(text2, textOptions);
+                textGeo2.center();
+                const textMesh2 = new THREE.Mesh(textGeo2, textMaterial);
+                textMesh2.position.set(x, y - 0.12, 0.2);
+                wheel.add(textMesh2);
             }
-            
-            return button;
         }
         
-        // Set up lights for the scene
+        // Set up basic lights
         function setupLights() {
             // Main directional light
             const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
             directionalLight.position.set(5, 5, 5);
             scene.add(directionalLight);
             
-            // Secondary fill light from opposite side
+            // Secondary fill light
             const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
             fillLight.position.set(-5, 0, 5);
             scene.add(fillLight);
-            
-            // Bottom light for more reflections
-            const bottomLight = new THREE.DirectionalLight(0xffffff, 0.3);
-            bottomLight.position.set(0, -5, 0);
-            scene.add(bottomLight);
             
             // Ambient light for global illumination
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -435,23 +320,17 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            composer.setSize(window.innerWidth, window.innerHeight);
-            
-            // Update FXAA pass
-            const pixelRatio = renderer.getPixelRatio();
-            fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * pixelRatio);
-            fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * pixelRatio);
         }
         
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
-            composer.render();
+            renderer.render(scene, camera);
         }
         
-        // Initialize everything when the page loads
-        window.onload = init;
+        // Initialize when window is loaded
+        window.addEventListener('load', init);
     </script>
 </body>
 </html>
