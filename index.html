@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Enhanced Frosted Glass Wheel</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glass Wheel - Three.js</title>
   <style>
     body {
       margin: 0;
@@ -11,326 +11,234 @@
       background-color: #e6e6e6;
       font-family: 'Segoe UI', Arial, sans-serif;
     }
-
-    #scene-container {
-      position: relative;
-      width: 100%;
-      height: 100vh;
-    }
-
     canvas {
       display: block;
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
     }
-
     #loading {
-      position: absolute;
+      position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 18px;
-      color: #333;
-      background: rgba(230, 230, 230, 0.9);
-      padding: 15px 30px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 20px;
       border-radius: 8px;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-      z-index: 10;
-    }
-
-    .ui-container {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 2;
-    }
-
-    .ui-element {
-      position: absolute;
-      color: #444;
-      text-align: center;
-      pointer-events: none;
-      transform: translate(-50%, -50%);
-      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
-      letter-spacing: 0.15em;
-      font-weight: 600;
-    }
-
-    .title-text {
-      left: 50%;
-      font-size: 2.2vmin;
-      text-transform: uppercase;
-    }
-
-    .button {
-      background-color: rgba(255, 255, 255, 0.65);
-      border: 1px solid rgba(255, 255, 255, 0.9);
-      border-radius: 12px;
-      padding: 1.5vmin 2.5vmin;
-      font-size: 1.6vmin;
-      box-shadow: 0 3px 15px rgba(0, 0, 0, 0.12);
-      line-height: 1.4;
-      pointer-events: auto;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      letter-spacing: 0.1em;
-      text-shadow: none;
-      min-width: 8vw;
-      backdrop-filter: blur(5px);
-    }
-
-    .button:hover {
-      background-color: rgba(255, 255, 255, 0.85);
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-      transform: translate(-50%, -50%) scale(1.03);
-    }
-
-    .button:active {
-      transform: translate(-50%, -50%) scale(0.98);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    /* For WebKit browsers */
-    ::-webkit-scrollbar {
-      width: 0;
-      height: 0;
-      background: transparent;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
     }
   </style>
 </head>
 <body>
-  <div id="scene-container">
-    <canvas id="main-canvas"></canvas>
-    <div id="loading">Loading 3D Scene...</div>
-    
-    <div class="ui-container">
-      <!-- UI elements will be added by JavaScript -->
-    </div>
-  </div>
+  <div id="loading">Loading 3D Scene...</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- Load the required libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   
   <script>
-    // Get the container and canvas
-    const container = document.getElementById('scene-container');
-    const canvas = document.getElementById('main-canvas');
-    const uiContainer = document.querySelector('.ui-container');
-    
-    // Create UI elements
-    function createUIElements() {
-      // Create title elements
-      const titleRealization = document.createElement('div');
-      titleRealization.className = 'ui-element title-text';
-      titleRealization.textContent = 'REALIZATION';
-      titleRealization.style.top = '30%';
-      
-      const titleToolkit = document.createElement('div');
-      titleToolkit.className = 'ui-element title-text';
-      titleToolkit.textContent = 'TOOLKIT';
-      titleToolkit.style.top = '36%';
-      
-      // Create buttons
-      const buttonEnroll = document.createElement('div');
-      buttonEnroll.className = 'ui-element button';
-      buttonEnroll.innerHTML = 'ENROLL<br>NOW';
-      buttonEnroll.style.top = '50%';
-      buttonEnroll.style.left = '25%';
-      buttonEnroll.id = 'button-enroll';
-      
-      const buttonExplore = document.createElement('div');
-      buttonExplore.className = 'ui-element button';
-      buttonExplore.innerHTML = 'EXPLORE<br>the<br>TOOLKIT';
-      buttonExplore.style.top = '50%';
-      buttonExplore.style.left = '75%';
-      buttonExplore.id = 'button-explore';
-      
-      const buttonFind = document.createElement('div');
-      buttonFind.className = 'ui-element button';
-      buttonFind.innerHTML = 'FIND your<br>TOOLS';
-      buttonFind.style.top = '75%';
-      buttonFind.style.left = '50%';
-      buttonFind.id = 'button-find';
-      
-      // Add elements to the container
-      uiContainer.appendChild(titleRealization);
-      uiContainer.appendChild(titleToolkit);
-      uiContainer.appendChild(buttonEnroll);
-      uiContainer.appendChild(buttonExplore);
-      uiContainer.appendChild(buttonFind);
-      
-      // Add click events
-      buttonEnroll.addEventListener('click', () => {
-        alert('Enroll Now button clicked!');
-      });
-      
-      buttonExplore.addEventListener('click', () => {
-        alert('Explore the Toolkit button clicked!');
-      });
-      
-      buttonFind.addEventListener('click', () => {
-        alert('Find your Tools button clicked!');
-      });
-    }
-    
-    // Initialize ThreeJS Scene
-    function initScene() {
+    // Wait for everything to load
+    window.addEventListener('load', function() {
       // Scene setup
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0xe6e6e6);
       
       // Camera setup
-      const camera = new THREE.PerspectiveCamera(
-        40, 
-        container.clientWidth / container.clientHeight,
-        0.1,
-        1000
-      );
-      camera.position.set(0, 0, 6.5);
+      const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 5;
       
       // Renderer setup
-      const renderer = new THREE.WebGLRenderer({
-        canvas: canvas,
-        antialias: true,
-        alpha: true
-      });
-      renderer.setSize(container.clientWidth, container.clientHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      document.body.appendChild(renderer.domElement);
       
-      // Controls setup
-      const controls = new THREE.OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.05;
-      controls.enableZoom = false; // Disable zoom on scroll
-      controls.enablePan = false;  // Disable panning
-      controls.rotateSpeed = 0.7;  // Adjust rotation speed
-      controls.target.set(0, 0, 0);
-      
-      // Lighting
+      // Lighting setup
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
       scene.add(ambientLight);
       
       const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      directionalLight.position.set(3, 5, 5);
+      directionalLight.position.set(5, 5, 5);
       directionalLight.castShadow = true;
-      directionalLight.shadow.mapSize.set(1024, 1024);
       scene.add(directionalLight);
       
-      const spotLight = new THREE.SpotLight(0xffffff, 0.8);
-      spotLight.position.set(-5, 3, 3);
-      spotLight.angle = Math.PI / 6;
-      spotLight.penumbra = 0.2;
-      spotLight.castShadow = true;
-      scene.add(spotLight);
+      const pointLight = new THREE.PointLight(0xffffff, 0.5);
+      pointLight.position.set(-3, 3, 3);
+      scene.add(pointLight);
       
-      // Enhanced glass material with optimized parameters
+      // Create the glass material
       const glassMaterial = new THREE.MeshPhysicalMaterial({
         color: 0xffffff,
         metalness: 0.1,
-        roughness: 0.05,
-        transmission: 0.98,
+        roughness: 0.1,
+        transmission: 0.9,
         transparent: true,
+        opacity: 0.8,
         clearcoat: 1.0,
         clearcoatRoughness: 0.1,
-        ior: 1.5,
-        reflectivity: 0.2,
-        side: THREE.DoubleSide,
-        envMapIntensity: 1.0
+        side: THREE.DoubleSide
       });
       
-      // Environment map for reflections
-      const envMapLoader = new THREE.CubeTextureLoader();
-      envMapLoader.load([
-        'https://threejs.org/examples/textures/cube/Park2/posx.jpg',
-        'https://threejs.org/examples/textures/cube/Park2/negx.jpg',
-        'https://threejs.org/examples/textures/cube/Park2/posy.jpg',
-        'https://threejs.org/examples/textures/cube/Park2/negy.jpg',
-        'https://threejs.org/examples/textures/cube/Park2/posz.jpg',
-        'https://threejs.org/examples/textures/cube/Park2/negz.jpg'
-      ], 
-      (envMap) => {
-        scene.environment = envMap;
-        glassMaterial.envMap = envMap;
-        glassMaterial.needsUpdate = true;
-        
-        // Hide loading when environment is ready
-        document.getElementById('loading').style.display = 'none';
-      });
-      
-      // Create wheel geometry with smoother edges
-      const torusGeometry = new THREE.TorusGeometry(
-        2,        // radius
-        0.65,     // tube radius
-        64,       // radial segments (higher for smoother edges)
-        96,       // tubular segments (higher for smoother curves)
-        Math.PI * 2
-      );
-      
-      const wheel = new THREE.Mesh(torusGeometry, glassMaterial);
+      // Create wheel (torus) geometry
+      const wheelGeometry = new THREE.TorusGeometry(1.5, 0.4, 32, 64);
+      const wheel = new THREE.Mesh(wheelGeometry, glassMaterial);
       wheel.rotation.x = Math.PI / 2;
       wheel.castShadow = true;
       wheel.receiveShadow = true;
       scene.add(wheel);
       
-      // Create and add subtle circular base
-      const baseGeometry = new THREE.CircleGeometry(3, 64);
-      const baseMaterial = new THREE.MeshPhysicalMaterial({
-        color: 0xfafafa,
-        metalness: 0.1,
-        roughness: 0.2,
-        transmission: 0.2,
-        transparent: true,
-        side: THREE.DoubleSide
+      // Text locations
+      const positions = [
+        { id: 'title', position: new THREE.Vector3(0, 1.4, 0), text: 'REALIZATION TOOLKIT', scale: 0.2 },
+        { id: 'enroll', position: new THREE.Vector3(-1.5, 0, 0.4), text: 'ENROLL NOW', scale: 0.15 },
+        { id: 'explore', position: new THREE.Vector3(1.5, 0, 0.4), text: 'EXPLORE the TOOLKIT', scale: 0.15 },
+        { id: 'find', position: new THREE.Vector3(0, -1.5, 0.4), text: 'FIND your TOOLS', scale: 0.15 }
+      ];
+      
+      // Create text with HTML elements
+      positions.forEach(item => {
+        // Convert 3D position to screen position
+        const vector = item.position.clone();
+        vector.project(camera);
+        
+        const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+        
+        // Create HTML element for text
+        const element = document.createElement('div');
+        element.style.position = 'absolute';
+        element.style.width = 'auto';
+        element.style.height = 'auto';
+        element.style.backgroundColor = item.id === 'title' ? 'transparent' : 'rgba(255, 255, 255, 0.85)';
+        element.style.color = '#333';
+        element.style.fontWeight = 'bold';
+        element.style.padding = item.id === 'title' ? '5px' : '10px 15px';
+        element.style.borderRadius = '10px';
+        element.style.transform = 'translate(-50%, -50%)';
+        element.style.fontFamily = 'Segoe UI, Arial, sans-serif';
+        element.style.fontSize = (item.scale * 100) + '%';
+        element.style.textAlign = 'center';
+        element.style.zIndex = '100';
+        element.style.letterSpacing = '2px';
+        element.style.lineHeight = '1.4';
+        element.style.boxShadow = item.id === 'title' ? 'none' : '0 3px 10px rgba(0, 0, 0, 0.2)';
+        element.style.textTransform = 'uppercase';
+        element.innerHTML = item.text.replace(' ', '<br>');
+        element.style.left = x + 'px';
+        element.style.top = y + 'px';
+        element.id = 'text-' + item.id;
+        
+        // Make buttons clickable
+        if (item.id !== 'title') {
+          element.style.cursor = 'pointer';
+          element.style.transition = 'all 0.2s ease';
+          element.addEventListener('mouseover', () => {
+            element.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+            element.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.25)';
+            element.style.transform = 'translate(-50%, -50%) scale(1.05)';
+          });
+          element.addEventListener('mouseout', () => {
+            element.style.backgroundColor = 'rgba(255, 255, 255, 0.85)';
+            element.style.boxShadow = '0 3px 10px rgba(0, 0, 0, 0.2)';
+            element.style.transform = 'translate(-50%, -50%) scale(1)';
+          });
+          element.addEventListener('click', () => {
+            alert(item.text + ' clicked!');
+          });
+        }
+        
+        document.body.appendChild(element);
+        
+        // Store for updating
+        item.element = element;
       });
       
-      const base = new THREE.Mesh(baseGeometry, baseMaterial);
-      base.position.set(0, 0, -0.2);
-      base.receiveShadow = true;
-      scene.add(base);
+      // Function to update text positions when scene changes
+      function updateTextPositions() {
+        positions.forEach(item => {
+          const vector = item.position.clone();
+          vector.project(camera);
+          
+          const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+          const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+          
+          item.element.style.left = x + 'px';
+          item.element.style.top = y + 'px';
+        });
+      }
       
-      // Resize handler
+      // Handle mouse interaction
+      const mouse = new THREE.Vector2();
+      let isMouseDown = false;
+      let previousMousePosition = { x: 0, y: 0 };
+      
+      window.addEventListener('mousemove', (e) => {
+        // Calculate mouse position in normalized device coordinates
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        
+        if (isMouseDown) {
+          const deltaMove = {
+            x: e.clientX - previousMousePosition.x,
+            y: e.clientY - previousMousePosition.y
+          };
+          
+          wheel.rotation.z += deltaMove.x * 0.01;
+          
+          previousMousePosition = {
+            x: e.clientX,
+            y: e.clientY
+          };
+        } else {
+          // Subtle movement based on mouse position when not dragging
+          wheel.rotation.y = mouse.x * 0.2;
+          wheel.rotation.x = Math.PI / 2 + mouse.y * 0.2;
+        }
+        
+        updateTextPositions();
+      });
+      
+      window.addEventListener('mousedown', (e) => {
+        isMouseDown = true;
+        previousMousePosition = {
+          x: e.clientX,
+          y: e.clientY
+        };
+      });
+      
+      window.addEventListener('mouseup', () => {
+        isMouseDown = false;
+      });
+      
+      // Window resize handler
       window.addEventListener('resize', () => {
-        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
-        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        updateTextPositions();
       });
       
-      // Prevent scroll zoom
-      window.addEventListener('wheel', (event) => {
-        event.preventDefault();
+      // Disable scroll zooming
+      window.addEventListener('wheel', (e) => {
+        e.preventDefault();
       }, { passive: false });
       
       // Animation loop
       function animate() {
         requestAnimationFrame(animate);
         
-        // Gently rotate the wheel
-        wheel.rotation.z += 0.001;
+        // Gentle rotation
+        if (!isMouseDown) {
+          wheel.rotation.z += 0.001;
+        }
         
-        // Update controls
-        controls.update();
-        
-        // Render
+        // Render scene
         renderer.render(scene, camera);
       }
       
+      // Hide loading when ready
+      document.getElementById('loading').style.display = 'none';
+      
+      // Start animation
       animate();
-    }
-    
-    // Wait for Three.js to load
-    window.addEventListener('load', function() {
-      // Create UI and initialize scene
-      createUIElements();
-      initScene();
     });
   </script>
 </body>
