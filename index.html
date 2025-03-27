@@ -18,7 +18,7 @@
 <body>
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
-    <script async src="https://cdnjs.cloudflare.com/ajax/libs/OrbitControls/2.110.3/OrbitControls.min.js"></script>
+    <script async src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
     <script>
         // Wait for Three.js to load
         window.addEventListener('load', function() {
@@ -47,10 +47,17 @@
             renderer.toneMappingExposure = 1.0;
             document.body.appendChild(renderer.domElement);
             
-            // Orbit controls
-            const controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
+            // Check if OrbitControls is loaded correctly
+            if (typeof THREE.OrbitControls === 'undefined') {
+                console.error('OrbitControls not loaded, adding a basic rotation to view the model');
+                // We'll add a simple rotation animation later if controls aren't available
+            } else {
+                // Orbit controls
+                const controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                window.controls = controls; // Store in window for access in animation loop
+            }
             
             // Create environment map for reflections
             const cubeTextureLoader = new THREE.CubeTextureLoader();
@@ -350,8 +357,15 @@
             function animate() {
                 requestAnimationFrame(animate);
                 
-                // Update controls
-                controls.update();
+                // Update controls if available
+                if (window.controls) {
+                    window.controls.update();
+                } else {
+                    // Add a simple rotation if controls aren't available
+                    camera.position.x = 5 * Math.sin(Date.now() * 0.0005);
+                    camera.position.z = 5 * Math.cos(Date.now() * 0.0005);
+                    camera.lookAt(0, 0, 0);
+                }
                 
                 // Subtle rotation animation
                 wheel.rotation.z += 0.001;
