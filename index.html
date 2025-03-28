@@ -3,12 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Circular Menu Wheel</title>
+    <title>Realization Toolkit Menu</title>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+
         .menu-container {
             position: relative;
             max-width: 500px;
-            margin: 0 auto;
             width: 100%;
         }
 
@@ -18,51 +27,53 @@
             display: block;
         }
 
-        .hotspot {
+        .menu-button {
             position: absolute;
-            border-radius: 50%;
             cursor: pointer;
-            transition: background-color 0.3s;
+            border-radius: 12px;
+            transition: all 0.3s ease;
         }
 
-        .hotspot:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+        .menu-button:hover {
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+            background-color: rgba(255, 255, 255, 0.1);
         }
 
+        /* Button positioning */
         .enroll-now {
-            top: 13%;
-            left: 22%;
-            width: 26%;
-            height: 26%;
+            top: 41%;
+            left: 21%;
+            width: 20%;
+            height: 13%;
             transform: translate(-50%, -50%);
         }
 
         .explore-toolkit {
-            top: 13%;
-            right: 22%;
-            width: 26%;
-            height: 26%;
+            top: 41%;
+            right: 21%;
+            width: 20%;
+            height: 13%;
             transform: translate(50%, -50%);
         }
 
         .find-tools {
-            bottom: 15%;
+            bottom: 18%;
             left: 50%;
-            width: 26%;
-            height: 26%;
+            width: 28%;
+            height: 13%;
             transform: translate(-50%, 50%);
         }
     </style>
 </head>
 <body>
     <div class="menu-container">
-        <img src="https://i.imgur.com/aIa0vfQ.png" alt="Menu Wheel" class="menu-image">
+        <!-- Use the actual image as background -->
+        <img src="https://i.imgur.com/JtvYpC2.png" alt="Realization Toolkit Menu" class="menu-image">
         
-        <!-- Clickable hotspots -->
-        <a href="/enroll" class="hotspot enroll-now" aria-label="Enroll Now"></a>
-        <a href="/explore" class="hotspot explore-toolkit" aria-label="Explore the Toolkit"></a>
-        <a href="/tools" class="hotspot find-tools" aria-label="Find your Tools"></a>
+        <!-- Clickable areas for each button -->
+        <a href="/enroll" class="menu-button enroll-now" aria-label="Enroll Now"></a>
+        <a href="/explore" class="menu-button explore-toolkit" aria-label="Explore the Toolkit"></a>
+        <a href="/tools" class="menu-button find-tools" aria-label="Find your Tools"></a>
     </div>
 </body>
 </html>
